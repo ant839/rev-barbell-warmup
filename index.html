@@ -265,6 +265,7 @@
     font-variant-numeric: tabular-nums;
     font-size: 17px;
   }
+  .final-row .weight{ display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   .reps{
     color: var(--chalk-dim);
     text-align: left;
@@ -281,15 +282,14 @@
     letter-spacing: 0.03em;
   }
   .opener-tag{
-    display:inline-block;
+    display: inline-block;
     font-size: 9px;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
     background: var(--plate-red);
     color: #fff;
-    padding: 2px 6px;
+    padding: 3px 7px;
     border-radius: 2px;
-    margin-left: 8px;
-    vertical-align: 2px;
+    white-space: nowrap;
   }
 
   .athlete-col{ text-align: right; width: 110px; }
@@ -310,6 +310,7 @@
     border-color: var(--plate-red);
   }
   .athlete-input::placeholder{ color: var(--chalk-dim); }
+  .custom-remove-cell .athlete-input{ width: 64px; }
 
   .custom-row td{ padding: 8px 16px; }
   .custom-input{
@@ -324,12 +325,34 @@
   }
   .custom-input:focus{ outline: none; border-color: var(--plate-red); }
   .custom-input::placeholder{ color: var(--chalk-dim); }
+  .athlete-col.custom-remove-cell{ width: 90px; }
   .custom-remove-cell{
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 4px;
+    flex-wrap: nowrap;
   }
+  .move-wrap{
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .move-btn{
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--chalk-dim);
+    border-radius: 2px;
+    width: 20px;
+    height: 13px;
+    font-size: 8px;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+  }
+  .move-btn:hover:not(:disabled){ border-color: var(--plate-red); color: var(--plate-red); }
+  .move-btn:disabled{ opacity: 0.25; cursor: default; }
   .remove-row-btn{
     background: none;
     border: 1px solid var(--line);
@@ -508,6 +531,8 @@
     { label: '40%',  pct: 0.40, reps: 'x3' },
     { label: 'Bar Work', pct: null, reps: '-', barRow: true }
   ];
+  var STAGE_BY_LABEL = {};
+  STAGES.forEach(function(s){ STAGE_BY_LABEL[s.label] = s; });
   var BAR_KG = 20;
 
   var lifts = [];
@@ -553,7 +578,8 @@
       name: nameSel.value === 'Custom' ? 'Snatch' : nameSel.value,
       openerKg: openerKg,
       athleteChanges: {},
-      customRows: [],
+      customRowsById: {},
+      order: STAGES.map(function(s){ return s.label; }),
       struck: {},
       notes: ''
     });
@@ -563,6 +589,17 @@
 
   function removeLift(id){
     lifts = lifts.filter(function(l){ return l.id !== id; });
+    render();
+  }
+
+  function moveOrderItem(lift, key, direction){
+    var idx = lift.order.indexOf(key);
+    if(idx < 0) return;
+    var newIdx = idx + direction;
+    if(newIdx < 0 || newIdx >= lift.order.length) return;
+    var tmp = lift.order[idx];
+    lift.order[idx] = lift.order[newIdx];
+    lift.order[newIdx] = tmp;
     render();
   }
 
@@ -632,8 +669,68 @@
       addAthleteInput(openerRow.querySelector('.athlete-col'), lift, 'opener');
       addStrikeToggle(openerRow, lift, 'opener');
 
-      STAGES.forEach(function(stage){
+      lift.order.forEach(function(key, idx){
         var tr = document.createElement('tr');
+
+        if(key.indexOf('custom-') === 0){
+          var rowId = key.slice(7);
+          var row = lift.customRowsById[rowId];
+          if(!row) return;
+
+          tr.className = 'custom-row';
+          tr.innerHTML =
+            '<td class="strike-col"></td>' +
+            '<td><input type="text" class="custom-input custom-reps" placeholder="Reps"></td>' +
+            '<td class="pct">\u2014</td>' +
+            '<td><input type="text" class="custom-input custom-weight" placeholder="Weight (kg)"></td>' +
+            '<td class="athlete-col custom-remove-cell"></td>';
+
+          var repsInput = tr.querySelector('.custom-reps');
+          var weightInput = tr.querySelector('.custom-weight');
+          repsInput.value = row.reps;
+          weightInput.value = row.weight;
+          repsInput.addEventListener('input', function(){ row.reps = this.value; });
+          weightInput.addEventListener('input', function(){ row.weight = this.value; });
+
+          var removeCell = tr.querySelector('.custom-remove-cell');
+
+          var moveWrap = document.createElement('div');
+          moveWrap.className = 'move-wrap';
+          var upBtn = document.createElement('button');
+          upBtn.type = 'button';
+          upBtn.className = 'move-btn';
+          upBtn.title = 'Move up';
+          upBtn.textContent = '\u25B2';
+          upBtn.disabled = idx === 0;
+          upBtn.addEventListener('click', function(){ moveOrderItem(lift, key, -1); });
+          var downBtn = document.createElement('button');
+          downBtn.type = 'button';
+          downBtn.className = 'move-btn';
+          downBtn.title = 'Move down';
+          downBtn.textContent = '\u25BC';
+          downBtn.disabled = idx === lift.order.length - 1;
+          downBtn.addEventListener('click', function(){ moveOrderItem(lift, key, 1); });
+          moveWrap.appendChild(upBtn);
+          moveWrap.appendChild(downBtn);
+
+          var removeBtn = document.createElement('button');
+          removeBtn.className = 'remove-row-btn';
+          removeBtn.title = 'Remove row';
+          removeBtn.textContent = '\u2715';
+          removeBtn.addEventListener('click', function(){
+            lift.order = lift.order.filter(function(k){ return k !== key; });
+            delete lift.customRowsById[rowId];
+            render();
+          });
+          removeCell.appendChild(moveWrap);
+          removeCell.appendChild(removeBtn);
+          tbody.appendChild(tr);
+          addStrikeToggle(tr, lift, key);
+          return;
+        }
+
+        var stage = STAGE_BY_LABEL[key];
+        if(!stage) return;
         var weightKg, weightText, pctText;
         if(stage.barRow){
           weightText = '15/20 kg';
@@ -648,55 +745,16 @@
           weightText = display(weightKg);
           pctText = stage.label;
         }
-        if(stage.isFinal) tr.className = 'opener-row';
+        if(stage.isFinal) tr.className = 'opener-row final-row';
         tr.innerHTML =
           '<td class="strike-col"></td>' +
           '<td class="reps">' + stage.reps + '</td>' +
           '<td class="pct">' + pctText + '</td>' +
-          '<td class="weight">' + weightText + (stage.isFinal ? '<span class="opener-tag">FINAL WARMUP ATTEMPT</span>' : '') + '</td>' +
+          '<td class="weight">' + weightText + (stage.isFinal ? '<span class="opener-tag">Final Attempt</span>' : '') + '</td>' +
           '<td class="athlete-col"></td>';
         tbody.appendChild(tr);
         addAthleteInput(tr.querySelector('.athlete-col'), lift, stage.label);
         addStrikeToggle(tr, lift, stage.label);
-      });
-
-      lift.customRows.forEach(function(row){
-        var tr = document.createElement('tr');
-        tr.className = 'custom-row';
-        tr.innerHTML =
-          '<td class="strike-col"></td>' +
-          '<td><input type="text" class="custom-input" placeholder="Reps"></td>' +
-          '<td><input type="text" class="custom-input" placeholder="%"></td>' +
-          '<td><input type="text" class="custom-input" placeholder="Weight (kg)"></td>' +
-          '<td class="athlete-col custom-remove-cell"></td>';
-        var inputs = tr.querySelectorAll('.custom-input');
-        inputs[0].value = row.reps;
-        inputs[1].value = row.pct;
-        inputs[2].value = row.weight;
-        inputs[0].addEventListener('input', function(){ row.reps = this.value; });
-        inputs[1].addEventListener('input', function(){ row.pct = this.value; });
-        inputs[2].addEventListener('input', function(){ row.weight = this.value; });
-
-        var removeCell = tr.querySelector('.custom-remove-cell');
-        var athleteInput = document.createElement('input');
-        athleteInput.type = 'number';
-        athleteInput.step = '0.5';
-        athleteInput.className = 'athlete-input';
-        athleteInput.placeholder = '\u2014';
-        athleteInput.value = row.change;
-        athleteInput.addEventListener('input', function(){ row.change = this.value; });
-        var removeBtn = document.createElement('button');
-        removeBtn.className = 'remove-row-btn';
-        removeBtn.title = 'Remove row';
-        removeBtn.textContent = '\u2715';
-        removeBtn.addEventListener('click', function(){
-          lift.customRows = lift.customRows.filter(function(r){ return r.id !== row.id; });
-          render();
-        });
-        removeCell.appendChild(athleteInput);
-        removeCell.appendChild(removeBtn);
-        tbody.appendChild(tr);
-        addStrikeToggle(tr, lift, 'custom-' + row.id);
       });
 
       table.appendChild(tbody);
@@ -714,7 +772,9 @@
       addRowBtn.className = 'add-row-btn';
       addRowBtn.textContent = '+ Add row';
       addRowBtn.addEventListener('click', function(){
-        lift.customRows.push({ id: Date.now() + Math.random(), reps: '', pct: '', weight: '', change: '' });
+        var newId = String(Date.now() + Math.random());
+        lift.customRowsById[newId] = { reps: '', weight: '' };
+        lift.order.push('custom-' + newId);
         render();
       });
       card.appendChild(addRowBtn);

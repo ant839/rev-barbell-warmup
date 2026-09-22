@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warm-Up Calculator</title>
+<style>
+  :root{
+    --iron: #1c1d1f;
+    --iron-2: #26282b;
+    --chalk: #f4f2ee;
+    --chalk-dim: #b9b6b0;
+    --plate-red: #c8452c;
+    --line: #3a3c3f;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: inherit; }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --iron: #f4f2ee;
+      --iron-2: #ffffff;
+      --chalk: #1c1d1f;
+      --chalk-dim: #63605b;
+      --plate-red: #b8391f;
+      --line: #ddd9d2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --iron: #1c1d1f;
+    --iron-2: #26282b;
+    --chalk: #f4f2ee;
+    --chalk-dim: #b9b6b0;
+    --plate-red: #c8452c;
+    --line: #3a3c3f;
+  }
+
+  html, body { height: 100%; }
+  body{
+    margin:0;
+    background: var(--iron);
+    color: var(--chalk);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100%;
+  }
+
+  .wrap{
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+
+  .screenshot-banner{
+    background: var(--plate-red);
+    color: #fff;
+    font-weight: 800;
+    font-size: clamp(14px, 4vw, 18px);
+    text-align: center;
+    padding: 14px 16px;
+    border-radius: 4px;
+    margin-bottom: 24px;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+  }
+
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 3px solid var(--chalk);
+    padding-bottom: 14px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  h1{
+    font-size: clamp(28px, 6vw, 40px);
+    letter-spacing: -0.02em;
+    margin: 0;
+    font-weight: 800;
+    line-height: 1;
+  }
+  h1 span{ color: var(--plate-red); }
+  .subtitle{
+    color: var(--chalk-dim);
+    font-size: 13px;
+    margin-top: 6px;
+  }
+  .unit-toggle{
+    display:flex;
+    border: 2px solid var(--chalk);
+    border-radius: 999px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .unit-toggle button{
+    background: transparent;
+    color: var(--chalk);
+    border: none;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .unit-toggle button.active{
+    background: var(--chalk);
+    color: var(--iron);
+  }
+
+  .add-lift{
+    background: var(--iron-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 18px;
+    margin-bottom: 24px;
+  }
+  .athlete-name-panel{ margin-bottom: 16px; }
+  .add-lift-title{
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--chalk-dim);
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  .add-lift form{
+    display:grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+  }
+  @media (max-width: 480px){
+    .add-lift form{ grid-template-columns: 1fr; }
+  }
+  .field label{
+    display:block;
+    font-size: 11px;
+    color: var(--chalk-dim);
+    margin-bottom: 5px;
+  }
+  .field input, .field select{
+    width: 100%;
+    background: var(--iron);
+    border: 1px solid var(--line);
+    color: var(--chalk);
+    padding: 11px 12px;
+    font-size: 16px;
+    border-radius: 3px;
+    font-family: inherit;
+  }
+  .field input:focus, .field select:focus{
+    outline: none;
+    border-color: var(--plate-red);
+  }
+  .add-btn{
+    background: var(--plate-red);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 0 22px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    align-self: end;
+    height: 44px;
+    font-family: inherit;
+  }
+  .add-btn:active{ transform: translateY(1px); }
+
+  .empty{
+    color: var(--chalk-dim);
+    text-align:center;
+    padding: 50px 10px;
+    font-size: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+  }
+
+  .lift-card{
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .lift-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background: var(--iron-2);
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .lift-name{
+    font-weight: 800;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+  .lift-opener{
+    color: var(--chalk-dim);
+    font-size: 13px;
+    margin-top: 2px;
+  }
+  .lift-opener b{ color: var(--chalk); font-size: 15px; }
+  .remove-btn{
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--chalk-dim);
+    border-radius: 3px;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  .remove-btn:hover{ border-color: var(--plate-red); color: var(--plate-red); }
+
+  table{
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead th{
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--chalk-dim);
+    padding: 10px 16px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--line);
+  }
+  thead th:last-child, tbody td:last-child { text-align: right; }
+  tbody td{
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 15px;
+  }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody tr.opener-row{ background: rgba(200,69,44,0.08); }
+  tbody tr.opener-row td{ font-weight: 800; }
+  .pct{ color: var(--chalk-dim); font-variant-numeric: tabular-nums; width: 70px; }
+  .weight{
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+  }
+  .reps{
+    color: var(--chalk-dim);
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
+  .opener-row .weight{ color: var(--plate-red); }
+  tr.platform-row{ border-top: 2px solid var(--chalk); }
+  tr.platform-row td{ font-weight: 800; }
+  tr.platform-row .reps{
+    color: var(--chalk);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .opener-tag{
+    display:inline-block;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    background: var(--plate-red);
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 2px;
+    margin-left: 8px;
+    vertical-align: 2px;
+  }
+
+  .athlete-col{ text-align: right; width: 110px; }
+  .athlete-input{
+    width: 90px;
+    max-width: 100%;
+    background: var(--iron);
+    border: 1px solid var(--line);
+    color: var(--chalk);
+    padding: 7px 8px;
+    font-size: 14px;
+    border-radius: 3px;
+    font-family: inherit;
+    text-align: right;
+  }
+  .athlete-input:focus{
+    outline: none;
+    border-color: var(--plate-red);
+  }
+  .athlete-input::placeholder{ color: var(--chalk-dim); }
+
+  .custom-row td{ padding: 8px 16px; }
+  .custom-input{
+    width: 100%;
+    background: var(--iron);
+    border: 1px solid var(--line);
+    color: var(--chalk);
+    padding: 7px 8px;
+    font-size: 14px;
+    border-radius: 3px;
+    font-family: inherit;
+  }
+  .custom-input:focus{ outline: none; border-color: var(--plate-red); }
+  .custom-input::placeholder{ color: var(--chalk-dim); }
+  .custom-remove-cell{
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .remove-row-btn{
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--chalk-dim);
+    border-radius: 3px;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  .remove-row-btn:hover{ border-color: var(--plate-red); color: var(--plate-red); }
+
+  .add-row-btn{
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    border-top: 1px solid var(--line);
+    color: var(--chalk-dim);
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+  }
+  .add-row-btn:hover{ color: var(--chalk); background: var(--iron-2); }
+
+  .notes-wrap{
+    border-top: 1px solid var(--line);
+    padding: 14px 16px 16px;
+  }
+  .notes-label{
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--chalk-dim);
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+  .notes-area{
+    width: 100%;
+    min-height: 64px;
+    background: var(--iron);
+    border: 1px solid var(--line);
+    color: var(--chalk);
+    padding: 10px 12px;
+    font-size: 14px;
+    border-radius: 3px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .notes-area:focus{ outline: none; border-color: var(--plate-red); }
+  .notes-area::placeholder{ color: var(--chalk-dim); }
+
+  .strike-head{
+    width: 60px;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .strike-col{
+    width: 60px;
+    text-align: center;
+    padding-left: 12px !important;
+    padding-right: 4px !important;
+  }
+  .strike-btn{
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    background: var(--iron);
+    color: var(--chalk-dim);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .strike-btn:hover{
+    border-color: var(--plate-red);
+    color: var(--plate-red);
+  }
+  .strike-btn.active{
+    background: var(--plate-red);
+    border-color: var(--plate-red);
+    color: #fff;
+  }
+  tr.struck td:not(.strike-col):not(.athlete-col){
+    opacity: 0.4;
+  }
+  tr.struck .pct,
+  tr.struck .weight,
+  tr.struck .reps{
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--plate-red);
+  }
+  tr.struck .opener-tag{ text-decoration: none; }
+
+  footer{
+    text-align:center;
+    color: var(--chalk-dim);
+    font-size: 11px;
+    margin-top: 30px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="screenshot-banner">Screenshot any changes and send directly to Ant. Nothing is saved here.</div>
+
+  <header>
+    <div>
+      <h1>Warm<span>-</span>Up</h1>
+      <div class="subtitle" id="subtitle">Competition warm-up attempts, built from your opener</div>
+    </div>
+  </header>
+
+  <div class="add-lift athlete-name-panel">
+    <div class="add-lift-title">ATHLETE</div>
+    <div class="field">
+      <label for="athleteName">Name</label>
+      <input type="text" id="athleteName" placeholder="Athlete name">
+    </div>
+  </div>
+
+  <div class="add-lift">
+    <div class="add-lift-title">ADD A LIFT</div>
+    <form id="liftForm">
+      <div class="field">
+        <label for="liftName">Lift</label>
+        <select id="liftName">
+          <option value="Snatch">Snatch</option>
+          <option value="Clean & Jerk">Clean &amp; Jerk</option>
+          <option value="Custom">Custom lift</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="openerVal" id="openerLabel">Opening attempt (kg)</label>
+
+        <input type="number" id="openerVal" inputmode="decimal" step="0.5" min="0" placeholder="e.g. 100" required>
+      </div>
+      <button type="submit" class="add-btn">Add</button>
+    </form>
+  </div>
+
+  <div id="cardArea">
+    <div class="empty" id="emptyState">No lifts added yet. Enter an opener above to build the warm-up.</div>
+  </div>
+
+  <footer>
+    Weights round to the nearest 1&nbsp;kg. For openers above 60&nbsp;kg, everything below 80% (70% and under, and Bar Work) rounds to the nearest 5&nbsp;kg.
+  </footer>
+</div>
+
+<script>
+(function(){
+  var STAGES = [
+    { label: '95%',  pct: 0.95, reps: '1 rep',  isFinal: true },
+    { label: '90%',  pct: 0.90, reps: '1 rep' },
+    { label: '85%',  pct: 0.85, reps: '1 rep' },
+    { label: '80%',  pct: 0.80, reps: '1 rep' },
+    { label: '70%',  pct: 0.70, reps: '2 reps' },
+    { label: '60%',  pct: 0.60, reps: '2 reps' },
+    { label: '40%',  pct: 0.40, reps: '3 reps' },
+    { label: 'Bar Work', pct: null, reps: '-', barRow: true }
+  ];
+  var BAR_KG = 20;
+
+  var lifts = [];
+
+  var athleteNameInput = document.getElementById('athleteName');
+  var subtitle = document.getElementById('subtitle');
+  athleteNameInput.addEventListener('input', function(){
+    var name = athleteNameInput.value.trim();
+    subtitle.textContent = name
+      ? 'Competition warm-up attempts for ' + name
+      : 'Competition warm-up attempts, built from your opener';
+  });
+
+  var form = document.getElementById('liftForm');
+  var nameSel = document.getElementById('liftName');
+  var openerInput = document.getElementById('openerVal');
+  var openerLabel = document.getElementById('openerLabel');
+  var cardArea = document.getElementById('cardArea');
+  var emptyState = document.getElementById('emptyState');
+
+  nameSel.addEventListener('change', function(){
+    if(nameSel.value === 'Custom'){
+      var custom = prompt('Name this lift:', '');
+      if(custom && custom.trim()){
+        var opt = document.createElement('option');
+        opt.value = custom.trim();
+        opt.textContent = custom.trim();
+        opt.selected = true;
+        nameSel.insertBefore(opt, nameSel.lastElementChild);
+      } else {
+        nameSel.value = 'Snatch';
+      }
+    }
+  });
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var val = parseFloat(openerInput.value);
+    if(!val || val <= 0) return;
+    var openerKg = val;
+    lifts.push({
+      id: Date.now() + Math.random(),
+      name: nameSel.value === 'Custom' ? 'Snatch' : nameSel.value,
+      openerKg: openerKg,
+      athleteChanges: {},
+      customRows: [],
+      struck: {},
+      notes: ''
+    });
+    openerInput.value = '';
+    render();
+  });
+
+  function removeLift(id){
+    lifts = lifts.filter(function(l){ return l.id !== id; });
+    render();
+  }
+
+  function roundTo(v, increment){
+    return Math.round(v / increment) * increment;
+  }
+
+  // Rounding rule: openers over 60kg round every stage up to and
+  // including 70% to the nearest 5kg. Everything else rounds to 1kg.
+  function roundStage(openerKg, stageKg, pct){
+    var isLowStage = pct === null || pct <= 0.70;
+    if(openerKg > 60 && isLowStage){
+      return roundTo(stageKg, 5);
+    }
+    return roundTo(stageKg, 1);
+  }
+
+  function display(kg){
+    return kg + ' kg';
+  }
+
+  function formatRaw(kg){
+    var rounded = Math.round(kg * 2) / 2;
+    return (rounded % 1 === 0 ? rounded : rounded.toFixed(1)) + ' kg';
+  }
+
+  function render(){
+    cardArea.innerHTML = '';
+    if(lifts.length === 0){
+      cardArea.appendChild(emptyState);
+      return;
+    }
+    lifts.forEach(function(lift){
+      var card = document.createElement('div');
+      card.className = 'lift-card';
+
+      var head = document.createElement('div');
+      head.className = 'lift-head';
+      head.innerHTML =
+        '<div>' +
+          '<div class="lift-name">' + escapeHtml(lift.name) + '</div>' +
+          '<div class="lift-opener">Opener: <b>' + display(lift.openerKg) + '</b></div>' +
+        '</div>';
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '\u2715';
+      removeBtn.addEventListener('click', function(){ removeLift(lift.id); });
+      head.appendChild(removeBtn);
+      card.appendChild(head);
+
+      var table = document.createElement('table');
+      var thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th class="strike-head">Remove Set</th><th>Reps</th><th>%</th><th>Suggested Weight</th><th>Athlete Change</th></tr>';
+      table.appendChild(thead);
+
+      var tbody = document.createElement('tbody');
+
+      var openerRow = document.createElement('tr');
+      openerRow.className = 'opener-row platform-row';
+      openerRow.innerHTML =
+        '<td class="strike-col"></td>' +
+        '<td class="reps">On Platform</td>' +
+        '<td class="pct">Opener</td>' +
+        '<td class="weight">' + formatRaw(lift.openerKg) + '</td>' +
+        '<td class="athlete-col"></td>';
+      tbody.appendChild(openerRow);
+      addAthleteInput(openerRow.querySelector('.athlete-col'), lift, 'opener');
+      addStrikeToggle(openerRow, lift, 'opener');
+
+      STAGES.forEach(function(stage){
+        var tr = document.createElement('tr');
+        var weightKg, weightText, pctText;
+        if(stage.barRow){
+          weightText = '15/20 kg';
+          pctText = stage.label;
+        } else if(stage.pct === null){
+          weightKg = roundStage(lift.openerKg, BAR_KG, stage.pct);
+          weightText = display(weightKg);
+          pctText = stage.label;
+        } else {
+          var rawKg = lift.openerKg * stage.pct;
+          weightKg = roundStage(lift.openerKg, rawKg, stage.pct);
+          weightText = display(weightKg);
+          pctText = stage.label;
+        }
+        if(stage.isFinal) tr.className = 'opener-row';
+        tr.innerHTML =
+          '<td class="strike-col"></td>' +
+          '<td class="reps">' + stage.reps + '</td>' +
+          '<td class="pct">' + pctText + '</td>' +
+          '<td class="weight">' + weightText + (stage.isFinal ? '<span class="opener-tag">FINAL WARMUP ATTEMPT</span>' : '') + '</td>' +
+          '<td class="athlete-col"></td>';
+        tbody.appendChild(tr);
+        addAthleteInput(tr.querySelector('.athlete-col'), lift, stage.label);
+        addStrikeToggle(tr, lift, stage.label);
+      });
+
+      lift.customRows.forEach(function(row){
+        var tr = document.createElement('tr');
+        tr.className = 'custom-row';
+        tr.innerHTML =
+          '<td class="strike-col"></td>' +
+          '<td><input type="text" class="custom-input" placeholder="Reps"></td>' +
+          '<td><input type="text" class="custom-input" placeholder="%"></td>' +
+          '<td><input type="text" class="custom-input" placeholder="Weight (kg)"></td>' +
+          '<td class="athlete-col custom-remove-cell"></td>';
+        var inputs = tr.querySelectorAll('.custom-input');
+        inputs[0].value = row.reps;
+        inputs[1].value = row.pct;
+        inputs[2].value = row.weight;
+        inputs[0].addEventListener('input', function(){ row.reps = this.value; });
+        inputs[1].addEventListener('input', function(){ row.pct = this.value; });
+        inputs[2].addEventListener('input', function(){ row.weight = this.value; });
+
+        var removeCell = tr.querySelector('.custom-remove-cell');
+        var athleteInput = document.createElement('input');
+        athleteInput.type = 'number';
+        athleteInput.step = '0.5';
+        athleteInput.className = 'athlete-input';
+        athleteInput.placeholder = '\u2014';
+        athleteInput.value = row.change;
+        athleteInput.addEventListener('input', function(){ row.change = this.value; });
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-row-btn';
+        removeBtn.title = 'Remove row';
+        removeBtn.textContent = '\u2715';
+        removeBtn.addEventListener('click', function(){
+          lift.customRows = lift.customRows.filter(function(r){ return r.id !== row.id; });
+          render();
+        });
+        removeCell.appendChild(athleteInput);
+        removeCell.appendChild(removeBtn);
+        tbody.appendChild(tr);
+        addStrikeToggle(tr, lift, 'custom-' + row.id);
+      });
+
+      table.appendChild(tbody);
+      card.appendChild(table);
+
+      var addRowBtn = document.createElement('button');
+      addRowBtn.className = 'add-row-btn';
+      addRowBtn.textContent = '+ Add row';
+      addRowBtn.addEventListener('click', function(){
+        lift.customRows.push({ id: Date.now() + Math.random(), reps: '', pct: '', weight: '', change: '' });
+        render();
+      });
+      card.appendChild(addRowBtn);
+
+      var notesWrap = document.createElement('div');
+      notesWrap.className = 'notes-wrap';
+      notesWrap.innerHTML = '<label class="notes-label">Notes</label>';
+      var notesArea = document.createElement('textarea');
+      notesArea.className = 'notes-area';
+      notesArea.placeholder = 'Why you want these warmups, I need 15 mins mobility before I start on the bar, etc.';
+      notesArea.value = lift.notes;
+      notesArea.addEventListener('input', function(){ lift.notes = this.value; });
+      notesWrap.appendChild(notesArea);
+      card.appendChild(notesWrap);
+
+      cardArea.appendChild(card);
+    });
+  }
+
+  function addAthleteInput(cell, lift, key){
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.step = '0.5';
+    input.className = 'athlete-input';
+    input.placeholder = '\u2014';
+    input.value = lift.athleteChanges[key] || '';
+    input.addEventListener('input', function(){ lift.athleteChanges[key] = this.value; });
+    cell.appendChild(input);
+  }
+
+  function addStrikeToggle(tr, lift, key){
+    var cell = tr.querySelector('.strike-col');
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'strike-btn';
+    btn.title = 'Strike out this set';
+    btn.textContent = '\u2715';
+    var isStruck = !!lift.struck[key];
+    btn.classList.toggle('active', isStruck);
+    if(isStruck) tr.classList.add('struck');
+    btn.addEventListener('click', function(){
+      var next = !lift.struck[key];
+      lift.struck[key] = next;
+      btn.classList.toggle('active', next);
+      tr.classList.toggle('struck', next);
+    });
+    cell.appendChild(btn);
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

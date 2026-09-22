@@ -222,27 +222,44 @@
 
   table{
     width: 100%;
+    min-width: 400px;
     border-collapse: collapse;
+  }
+  .table-scroll{
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-hint{
+    display: none;
+    text-align: center;
+    font-size: 11px;
+    color: var(--chalk-dim);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 600px){
+    .scroll-hint{ display: block; }
   }
   thead th{
     text-align: left;
     font-size: 10px;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
     color: var(--chalk-dim);
-    padding: 10px 16px;
+    padding: 10px 10px;
     font-weight: 700;
     border-bottom: 1px solid var(--line);
   }
   thead th:last-child, tbody td:last-child { text-align: right; }
   tbody td{
-    padding: 12px 16px;
+    padding: 12px 10px;
     border-bottom: 1px solid var(--line);
     font-size: 15px;
   }
   tbody tr:last-child td{ border-bottom: none; }
   tbody tr.opener-row{ background: rgba(200,69,44,0.08); }
   tbody tr.opener-row td{ font-weight: 800; }
-  .pct{ color: var(--chalk-dim); font-variant-numeric: tabular-nums; width: 70px; }
+  .pct{ color: var(--chalk-dim); font-variant-numeric: tabular-nums; width: 56px; }
   .weight{
     font-weight: 800;
     font-variant-numeric: tabular-nums;
@@ -252,6 +269,8 @@
     color: var(--chalk-dim);
     text-align: left;
     font-variant-numeric: tabular-nums;
+    width: 48px;
+    font-size: 13px;
   }
   .opener-row .weight{ color: var(--plate-red); }
   tr.platform-row{ border-top: 2px solid var(--chalk); }
@@ -371,24 +390,29 @@
   .notes-area::placeholder{ color: var(--chalk-dim); }
 
   .strike-head{
-    width: 60px;
-    white-space: nowrap;
+    width: 30px;
+    white-space: normal;
     text-align: center;
+    font-size: 8px;
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+    padding-left: 6px !important;
+    padding-right: 2px !important;
   }
   .strike-col{
-    width: 60px;
+    width: 30px;
     text-align: center;
-    padding-left: 12px !important;
-    padding-right: 4px !important;
+    padding-left: 6px !important;
+    padding-right: 2px !important;
   }
   .strike-btn{
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     border-radius: 3px;
     border: 1px solid var(--line);
     background: var(--iron);
     color: var(--chalk-dim);
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
@@ -475,13 +499,13 @@
 <script>
 (function(){
   var STAGES = [
-    { label: '95%',  pct: 0.95, reps: '1 rep',  isFinal: true },
-    { label: '90%',  pct: 0.90, reps: '1 rep' },
-    { label: '85%',  pct: 0.85, reps: '1 rep' },
-    { label: '80%',  pct: 0.80, reps: '1 rep' },
-    { label: '70%',  pct: 0.70, reps: '2 reps' },
-    { label: '60%',  pct: 0.60, reps: '2 reps' },
-    { label: '40%',  pct: 0.40, reps: '3 reps' },
+    { label: '95%',  pct: 0.95, reps: 'x1',  isFinal: true },
+    { label: '90%',  pct: 0.90, reps: 'x1' },
+    { label: '85%',  pct: 0.85, reps: 'x1' },
+    { label: '80%',  pct: 0.80, reps: 'x1' },
+    { label: '70%',  pct: 0.70, reps: 'x2' },
+    { label: '60%',  pct: 0.60, reps: 'x2' },
+    { label: '40%',  pct: 0.40, reps: 'x3' },
     { label: 'Bar Work', pct: null, reps: '-', barRow: true }
   ];
   var BAR_KG = 20;
@@ -600,7 +624,7 @@
       openerRow.className = 'opener-row platform-row';
       openerRow.innerHTML =
         '<td class="strike-col"></td>' +
-        '<td class="reps">On Platform</td>' +
+        '<td class="reps">Platform</td>' +
         '<td class="pct">Opener</td>' +
         '<td class="weight">' + formatRaw(lift.openerKg) + '</td>' +
         '<td class="athlete-col"></td>';
@@ -676,7 +700,15 @@
       });
 
       table.appendChild(tbody);
-      card.appendChild(table);
+      var tableScroll = document.createElement('div');
+      tableScroll.className = 'table-scroll';
+      tableScroll.appendChild(table);
+      card.appendChild(tableScroll);
+
+      var scrollHint = document.createElement('div');
+      scrollHint.className = 'scroll-hint';
+      scrollHint.textContent = '\u2190 Swipe to see Athlete Change \u2192';
+      card.appendChild(scrollHint);
 
       var addRowBtn = document.createElement('button');
       addRowBtn.className = 'add-row-btn';

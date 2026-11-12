@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saturdays: who's in?</title>
+<style>
+  :root{
+    --bg:#f4f1ea; --card:#fffdf8; --ink:#1d1b16; --muted:#6f6a5e; --line:#e2dccd;
+    --in:#1f7a4d; --in-bg:#dff1e6; --out:#a8402f; --out-bg:#f7e1dc; --accent:#1d1b16;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#15140f; --card:#1f1d17; --ink:#f1ede2; --muted:#a09a8a; --line:#35322a;
+      --in:#6fd09a; --in-bg:#1c3a2a; --out:#f0907e; --out-bg:#43221c; --accent:#f1ede2; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  main{max-width:560px;margin:0 auto;padding:28px 16px 64px}
+  h1{font-size:30px;line-height:1.1;margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin:0 0 18px}
+  .notice{border:1px solid var(--line);background:var(--card);border-radius:12px;
+    padding:10px 12px;margin:0 0 14px;font-size:14px;color:var(--muted)}
+  .notice[hidden]{display:none}
+  .nick{display:flex;gap:8px;margin:0 0 20px}
+  .nick input{flex:1;min-width:0;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
+    background:var(--card);color:var(--ink);font:inherit}
+  .nick button{padding:0 16px;border-radius:10px;border:0;background:var(--accent);color:var(--bg);
+    font:inherit;font-weight:600}
+  .nick[hidden]{display:none}
+  .month{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);margin:22px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 10px}
+  .top{display:flex;align-items:center;gap:12px}
+  .day{font-size:28px;font-weight:700;width:44px;text-align:center;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums}
+  .meta{flex:1;min-width:0}
+  .meta b{display:block;font-size:15px}
+  .meta span{font-size:13px;color:var(--muted)}
+  .btns{display:flex;gap:6px}
+  .btns button{min-width:58px;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line);
+    background:transparent;color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+  .btns button:disabled{opacity:.45;cursor:default}
+  .btns button.on-in{background:var(--in-bg);border-color:var(--in);color:var(--in)}
+  .btns button.on-out{background:var(--out-bg);border-color:var(--out);color:var(--out)}
+  .who{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+  .who:empty{display:none}
+  .chip{font-size:13px;padding:3px 9px;border-radius:999px}
+  .chip.in{background:var(--in-bg);color:var(--in)}
+  .chip.out{background:var(--out-bg);color:var(--out);text-decoration:line-through}
+</style>
+</head>
+<body>
+<main>
+  <h1>Saturdays: who's in?</h1>
+  <p class="sub">Pop your name in, then tap In or Out for each Saturday. Tap again to clear.</p>
+  <form id="nick" class="nick">
+    <input id="nickInput" maxlength="24" placeholder="Your name (shown to the group)" autocomplete="nickname">
+    <button type="submit">Save</button>
+  </form>
+  <div id="notice" class="notice">Loading responses…</div>
+  <div id="list"></div>
+</main>
+<script>
+(function(){
+  var API = "https://awlsihvkilojotibqljs.supabase.co/rest/v1/saturday_rsvps";
+  var KEY = "sb_publishable_dlR5d1x59oqrsdcm9uxOBA_rnGlU8kb";
+  var DATES = ["2026-12-05","2026-12-12","2026-12-19","2026-12-26",
+               "2027-01-02","2027-01-09","2027-01-16","2027-01-23","2027-01-30"];
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var NOTES = {"2026-12-26":"Boxing Day"};
+
+  var store = { get:function(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+                set:function(k,v){ try{ localStorage.setItem(k,v); }catch(e){} } };
+  function uuid(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,function(c){ var r=Math.random()*16|0; return (c==="x"?r:(r&3|8)).toString(16); });
+  }
+  var myId = store.get("sat_id"); if(!myId){ myId = uuid(); store.set("sat_id", myId); }
+  var myName = (store.get("sat_name") || "").trim().slice(0,24);
+
+  var people = {};      // person_id -> {name, responses}
+  var loaded = false, saving = false, queued = false;
+
+  var listEl = document.getElementById("list");
+  var noticeEl = document.getElementById("notice");
+  var nickForm = document.getElementById("nick");
+  var nickInput = document.getElementById("nickInput");
+  nickInput.value = myName;
+
+  function notice(msg){ if(msg){ noticeEl.textContent = msg; noticeEl.hidden = false; } else { noticeEl.hidden = true; } }
+  function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+  function mine(){
+    var p = people[myId] || {}, out = {}, r = p.responses || {};
+    for(var k in r){ if(DATES.indexOf(k) >= 0 && (r[k] === "in" || r[k] === "out")) out[k] = r[k]; }
+    return out;
+  }
+  function headers(extra){
+    var h = { "apikey": KEY, "Authorization": "Bearer " + KEY, "Content-Type": "application/json" };
+    for(var k in extra) h[k] = extra[k];
+    return h;
+  }
+
+  function render(){
+    listEl.textContent = "";
+    var lastMonth = "", my = mine();
+    DATES.forEach(function(key){
+      var p = key.split("-"), y = +p[0], m = +p[1], d = +p[2];
+      var label = MONTHS[m-1] + " " + y;
+      if(label !== lastMonth){ listEl.appendChild(el("div","month",label)); lastMonth = label; }
+      var ins = [], outs = [];
+      Object.keys(people).forEach(function(id){
+        var v = people[id].responses && people[id].responses[key];
+        var n = String(people[id].name || "Someone").slice(0,24) + (id === myId ? " (you)" : "");
+        if(v === "in") ins.push(n); else if(v === "out") outs.push(n);
+      });
+      var card = el("div","card"), top = el("div","top");
+      top.appendChild(el("div","day",String(d)));
+      var meta = el("div","meta");
+      meta.appendChild(el("b",null,"Saturday" + (NOTES[key] ? " · " + NOTES[key] : "")));
+      meta.appendChild(el("span",null, loaded ? (ins.length + " in · " + outs.length + " out") : "…"));
+      top.appendChild(meta);
+      var btns = el("div","btns");
+      [["in","In"],["out","Out"]].forEach(function(o){
+        var b = el("button", my[key] === o[0] ? "on-" + o[0] : "", o[1]);
+        b.type = "button";
+        b.setAttribute("aria-pressed", my[key] === o[0] ? "true" : "false");
+        b.addEventListener("click", function(){ respond(key, o[0]); });
+        btns.appendChild(b);
+      });
+      top.appendChild(btns); card.appendChild(top);
+      var who = el("div","who");
+      ins.forEach(function(n){ who.appendChild(el("span","chip in",n)); });
+      outs.forEach(function(n){ who.appendChild(el("span","chip out",n)); });
+      card.appendChild(who); listEl.appendChild(card);
+    });
+  }
+
+  function load(){
+    if(saving || queued) return Promise.resolve();
+    return fetch(API + "?select=person_id,name,responses", { headers: headers({}), cache: "no-store" })
+      .then(function(r){ if(!r.ok) throw new Error("load"); return r.json(); })
+      .then(function(rows){
+        if(saving || queued) return;
+        var next = {};
+        rows.forEach(function(r){ next[r.person_id] = { name: r.name, responses: r.responses || {} }; });
+        people = next; loaded = true;
+        if(noticeEl.textContent.indexOf("Loading") === 0 || noticeEl.textContent.indexOf("Can't load") === 0) notice("");
+        render();
+      })
+      .catch(function(){ if(!loaded) notice("Can't load responses. Check your connection."); });
+  }
+
+  function push(){
+    if(saving){ queued = true; return; }
+    saving = true; queued = false;
+    var body = { person_id: myId, name: myName, responses: mine(), updated_at: new Date().toISOString() };
+    fetch(API + "?on_conflict=person_id", { method: "POST",
+      headers: headers({ "Prefer": "resolution=merge-duplicates,return=minimal" }), body: JSON.stringify(body) })
+      .then(function(r){ if(!r.ok) throw new Error("save"); notice(""); })
+      .catch(function(){ notice("That didn't save. Check your connection and tap again."); })
+      .then(function(){ saving = false; if(queued) push(); else load(); });
+  }
+
+  function respond(key, val){
+    if(!myName){ notice("Add your name first so the others know who's coming."); nickInput.focus(); return; }
+    var r = mine();
+    if(r[key] === val) delete r[key]; else r[key] = val;
+    people[myId] = { name: myName, responses: r };
+    render(); push();
+  }
+  nickForm.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var n = nickInput.value.trim().slice(0,24);
+    if(!n){ notice("Type a name first."); return; }
+    myName = n; store.set("sat_name", n);
+    people[myId] = { name: n, responses: mine() };
+    notice("Saved. Now tap In or Out below.");
+    render(); push();
+  });
+
+  render(); load();
+  setInterval(function(){ if(!document.hidden) load(); }, 20000);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) load(); });
+})();
+</script>
+</body>
+</html>
